@@ -73,7 +73,9 @@ class BoardView(ModelViewSet):
             'lists__cards__card_files',
             'lists__cards__card_members__user',
             'lists__cards__card_comments__user',
-        ).select_related('board_owner').filter(
+        ).select_related('board_owner')
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(
             Q(board_owner=user_id) | Q(id__in=boards_id)
         )
         return queryset
@@ -287,7 +289,7 @@ class BoardMemberView(ModelViewSet):
         
         if board_member_requesting.role == 'BoardOwner':
             if member_to_delete.role == 'BoardOwner':
-                raise PermissionDenied("A BoardOwner cannot delete themselves.")
+                raise PermissionDenied("A BoardOwner cannot delete himself.")
         
         elif board_member_requesting.role == 'Admin':
             if member_to_delete.role in ['Admin', 'BoardOwner']:

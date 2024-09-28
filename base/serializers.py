@@ -243,14 +243,14 @@ class UpdateBoardMemberSerializer(serializers.ModelSerializer):
             return roles.index(role_one) >= roles.index(role_two)
         
         if editor_role == 'BoardOwner':
-            if current_role == 'BoardOwner' or post_role == 'BoardOwner':
-                raise PermissionDenied("you can't edit or add another BoardOwner")
+            if current_role == 'BoardOwner' or post_role == 'BoardOwner' or post_role == 'Admin' or current_role == 'Admin':
+                raise PermissionDenied("you can't edit or add another BoardOwner or Admin")
 
         elif editor_role == 'Admin':
             if is_role_higher_or_equal(current_role, 'Admin'):
                 raise PermissionDenied("You cannot modify another Admin or BoardOwner.")
-            if post_role == 'BoardOwner':
-                raise PermissionDenied("There can only be one board owner.")
+            if post_role == 'BoardOwner' or post_role == 'Admin':
+                raise PermissionDenied("You can't make users admins or board_owners")
 
         
         elif editor_role == 'Manager':
@@ -303,10 +303,10 @@ class BaseBoardMemberSerializer(serializers.ModelSerializer):
             raise PermissionDenied("The manager can't add a member as admin or above")
         if creator.role == 'Manager' and added_user.role in ['Admin','Staff'] :
             raise PermissionDenied("the user is an admin in the app so you can't add him because you can't add admins or above")
-        if creator.role == 'Admin' and role == 'BoardOwner':
-            raise PermissionDenied("The Admin only can add member as admin or lower")
+        if creator.role == 'Admin' and (role == 'BoardOwner' or role == 'Admin'):
+            raise PermissionDenied("The Admin only can add member as Managers or lower")
         if creator.role == 'BoardOwner' and role == 'BoardOwner':
-            raise PermissionDenied("You can add just members As admin or lower")
+            raise PermissionDenied("You can add just members As Managers or lower")
         if creator.role == 'Member':
             raise PermissionDenied("you don't have permission to add members")
 

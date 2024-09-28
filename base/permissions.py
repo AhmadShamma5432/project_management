@@ -3,13 +3,17 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import SAFE_METHODS
 from .models import List,Card,Board,BoardMember
 
-class IsBoardMember(BasePermission):
+class IsBoardMemberOrAdmin(BasePermission):
     def has_permission(self, request, view):
+        if request.user.is_superuser:
+            return True
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
         return True
 
     def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
         return True
@@ -23,12 +27,16 @@ class CustomBoardPermissionClass(BasePermission):
     def has_object_permission(self, request, view, obj):
         
         if request.method in ['PATCH','PUT','DELETE']:
-            return obj.board_owner == request.user
+            return obj.board_owner == request.user or request.user.is_superuser
         return True
 
 class CustomListPermissionClass(BasePermission):
 
     def has_permission(self, request, view):
+        
+        if request.user.is_superuser:
+            return True
+
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
         
@@ -38,7 +46,8 @@ class CustomListPermissionClass(BasePermission):
         
         return True
     def has_object_permission(self, request, view, obj):
-        # print(request.action)
+        if request.user.is_superuser:
+            return True
 
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
@@ -55,17 +64,23 @@ class CustomListPermissionClass(BasePermission):
 class CustomCardPermissionClass(BasePermission):
 
     def has_permission(self, request, view):
+        if request.user.is_superuser:
+            return True
         # Check if the user is a board member and has board-level permissions
-        is_board_member = IsBoardMember().has_permission(request, view)
-        board_permissions = CustomBoardPermissionClass().has_permission(request, view)
+        is_board_member = IsBoardMemberOrAdmin().has_permission(request, view)
+        if not is_board_member :
+            return False
 
         board_member = view.board_member
-        if is_board_member and request.method == 'POST' and board_member.role == 'Member':
-            return False
-        
-        return is_board_member and board_permissions
+
+        if board_member.role == 'Member':
+            if request.method == 'POST' or view.action == 'move':
+                return False
+        return is_board_member
 
     def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
         # Ensure the board_member is attached to the view, not the request
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
@@ -82,19 +97,44 @@ class CustomCardPermissionClass(BasePermission):
     
 class CustomBoardMemberPermissionClass(BasePermission):
     def has_permission(self, request, view):
-        is_board_member = IsBoardMember().has_permission(request,view)
-        return is_board_member
-    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
+        
+        board_member_role = view.board_member.role
+        if board_member_role == 'Member' and request.method == 'POST':
+            return False
+        return True
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+
+        if not hasattr(view, 'board_member') or view.board_member is None:
+            raise PermissionDenied("The user is not a member of the board")
+
+        board_member = view.board_member
+        if request.method == 'DELETE':
+            if board_member.role != 'BoardOwner' and request.user == obj.user :
+                return True
+            if board_member.role == 'Member' and request.user == obj.user:
+                return True
+            if board_member.role != 'Member' and request.user != obj.user:
+                return True
+            return False
+        #the rest of permissions are handled by the update serilaizer function
         return True
     
 class CustomCardMemberPermissionClass(BasePermission):
     def has_permission(self, request, view):
-        is_board_member = IsBoardMember().has_permission(request,view)
+        is_board_member = IsBoardMemberOrAdmin().has_permission(request,view)
         return is_board_member
     
     def has_object_permission(self, request, view, obj):
+        
+        if request.user.is_superuser:
+            return True
 
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
@@ -107,6 +147,9 @@ class CustomCardMemberPermissionClass(BasePermission):
 
 class CustomCardFilePermissionClass(BasePermission):
     def has_permission(self, request, view):
+        if request.user.is_superuser:
+            return True
+
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
         
@@ -118,6 +161,8 @@ class CustomCardFilePermissionClass(BasePermission):
         return IsAuthenticated().has_permission(request,view)
     
     def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
         
@@ -131,9 +176,11 @@ class CustomCardFilePermissionClass(BasePermission):
 
 class CustomCardCommentPermissionClass(BasePermission):
     def has_permission(self, request, view):
-        return IsBoardMember().has_permission(request,view)
+        return IsBoardMemberOrAdmin().has_permission(request,view)
     
     def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
         if not hasattr(view, 'board_member') or view.board_member is None:
             raise PermissionDenied("The user is not a member of the board")
         

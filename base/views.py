@@ -380,3 +380,4 @@ class CardCommentView(ModelViewSet):
     def get_serializer_context(self):
         return {"card_id":self.kwargs['card_pk'],"user_id":self.request.user.id}
     
+    

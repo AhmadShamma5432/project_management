@@ -234,7 +234,10 @@ class UpdateBoardMemberSerializer(serializers.ModelSerializer):
         post_role = validated_data['role']
         editor_id = self.context['creator_id']
 
-        editor_role = BoardMember.objects.get(board_id=board_id,user_id=editor_id).role
+        if instance.user.role == 'Admin':
+            editor_role = 'Admin'
+        else:    
+            editor_role = BoardMember.objects.get(board_id=board_id,user_id=editor_id).role
         current_role = instance.role
 
         roles = ['Member','Manager','Admin','BoardOwner']

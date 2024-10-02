@@ -234,7 +234,9 @@ class UpdateBoardMemberSerializer(serializers.ModelSerializer):
         post_role = validated_data['role']
         editor_id = self.context['creator_id']
 
-        if instance.user.role == 'Admin':
+        editor = User.objects.get(id=editor_id)
+
+        if editor.is_superuser or editor.is_staff :
             editor_role = 'Admin'
         else:    
             editor_role = BoardMember.objects.get(board_id=board_id,user_id=editor_id).role
@@ -297,21 +299,25 @@ class BaseBoardMemberSerializer(serializers.ModelSerializer):
             user_instance = User.objects.get(id=user_id)
         except User.DoesNotExist:
             raise Exception("The USER is not exists")
-        
-        creator = BoardMember.objects.get(board_id=board_id,user=creator_id)
+
+        editor = User.objects.get(id=creator_id)    
+        if editor.is_superuser or editor.is_staff:
+            creator = 'Admin'
+        else:
+            creator = BoardMember.objects.get(board_id=board_id,user=creator_id).role
         added_user = User.objects.get(id=user_id)
 
-        if creator.role == 'Manager' and role in ['Admin','BoardOwner'] :
+        if creator == 'Manager' and role in ['Admin','BoardOwner'] :
             raise PermissionDenied("The manager can't add a member as admin or above")
-        if creator.role == 'Manager' and added_user.role in ['Admin','Staff'] :
+        if creator == 'Manager' and added_user.role in ['Admin','Staff'] :
             raise PermissionDenied("the user is an admin in the app so you can't add him because you can't add admins or above")
-        if creator.role == 'Admin' and (role == 'BoardOwner' or role == 'Admin'):
+        if creator == 'Admin' and (role == 'BoardOwner' or role == 'Admin'):
             raise PermissionDenied("The Admin only can add member as Managers or lower")
-        if creator.role in ['Admin','BoardOwner'] and role == 'Admin' and user_instance.role not in ['Admin','Staff']:
+        if creator in ['Admin','BoardOwner'] and role == 'Admin' and user_instance.role not in ['Admin','Staff']:
             raise PermissionDenied("to add an admin as a user he should be an admin in the app first")
-        if creator.role == 'BoardOwner' and role == 'BoardOwner':
+        if creator == 'BoardOwner' and role == 'BoardOwner':
             raise PermissionDenied("You can add just members As Managers or lower")
-        if creator.role == 'Member':
+        if creator == 'Member':
             raise PermissionDenied("you don't have permission to add members")
 
         if user_instance.role in ['Admin','Staff']:

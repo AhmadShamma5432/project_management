@@ -269,6 +269,8 @@ class BoardMemberView(ModelViewSet):
         return super().initial(request, *args, **kwargs)
 
     def get_queryset(self):
+        if not Board.objects.filter(id = self.kwargs['board_pk']).exists():
+            raise PermissionDenied("The board isn't exist")
         queryset = BoardMember.objects.select_related('board','user').filter(board_id=self.kwargs['board_pk'])
 
         return queryset

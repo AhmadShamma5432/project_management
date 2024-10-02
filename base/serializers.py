@@ -270,10 +270,9 @@ class UpdateBoardMemberSerializer(serializers.ModelSerializer):
     
 class BaseBoardMemberSerializer(serializers.ModelSerializer):
     user= SimpleUserSerializer()
-    board = SimpleBoardSerializer(read_only=True)
     class Meta:
         model = BoardMember
-        fields = ['id','board','user','role']
+        fields = ['id','user','role']
 
 
     def create(self, validated_data):

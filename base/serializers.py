@@ -305,6 +305,8 @@ class BaseBoardMemberSerializer(serializers.ModelSerializer):
             raise PermissionDenied("the user is an admin in the app so you can't add him because you can't add admins or above")
         if creator.role == 'Admin' and (role == 'BoardOwner' or role == 'Admin'):
             raise PermissionDenied("The Admin only can add member as Managers or lower")
+        if creator.role in ['Admin','BoardOwner'] and role == 'Admin' and user_instance.role not in ['Admin','Staff']:
+            raise PermissionDenied("to add an admin as a user he should be an admin in the app first")
         if creator.role == 'BoardOwner' and role == 'BoardOwner':
             raise PermissionDenied("You can add just members As Managers or lower")
         if creator.role == 'Member':
